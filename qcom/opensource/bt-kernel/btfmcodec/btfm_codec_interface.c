@@ -329,7 +329,13 @@ static void btfmcodec_dai_shutdown(struct snd_pcm_substream *substream,
 		dai->id, dai->rate);
 
 	if (btfmcodec_get_current_transport(state) == IDLE) {
-		BTFMCODEC_INFO("%s not allowing shutdown as state is IDLE", __func__);   
+		/* Classic BT transport stays in IDLE forever, so skipping the
+		 * shutdown here would leak one SWR port per stream close until
+		 * audio breaks completely. Tear the hwep down just like the
+		 * non-IDLE path does. */
+		BTFMCODEC_INFO("%s: closing hwep on IDLE to avoid port leak", __func__);
+		btfmcodec_hwep_shutdown(btfmcodec, dai->id, false);
+		btfmcodec_delete_configs(btfmcodec, dai->id);
 		return;
 	}
 
